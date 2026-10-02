@@ -1,0 +1,200 @@
+
+-- ============================================================
+-- BASE DE DATOS: OPERADORA MOVIL
+-- Curso: Ingeniería Web para Telecomunicaciones 
+-- Objetivo: práctica de SELECT, CONCAT, alias, operaciones y fechas
+-- Compatible con MySQL 8.x
+-- ============================================================
+
+DROP DATABASE IF EXISTS operadora_movil;
+CREATE DATABASE operadora_movil
+  CHARACTER SET utf8mb4
+  COLLATE utf8mb4_unicode_ci;
+
+USE operadora_movil;
+
+-- ------------------------------------------------------------
+-- 1. TABLA CLIENTE
+-- ------------------------------------------------------------
+CREATE TABLE cliente (
+    idCliente INT PRIMARY KEY AUTO_INCREMENT,
+    dni VARCHAR(8) NOT NULL UNIQUE,
+    nombres VARCHAR(50) NOT NULL,
+    apellidos VARCHAR(50) NOT NULL,
+    correo VARCHAR(100),
+    fechaNacimiento DATE NOT NULL
+);
+
+-- ------------------------------------------------------------
+-- 2. TABLA PLAN
+-- ------------------------------------------------------------
+CREATE TABLE plan (
+    idPlan INT PRIMARY KEY AUTO_INCREMENT,
+    nombre VARCHAR(50) NOT NULL,
+    precioMensual DECIMAL(8,2) NOT NULL,
+    gbIncluidos INT NOT NULL,
+    minutosIncluidos INT NOT NULL,
+    smsIncluidos INT NOT NULL
+);
+
+-- ------------------------------------------------------------
+-- 3. TABLA LINEA
+-- ------------------------------------------------------------
+CREATE TABLE linea (
+    idLinea INT PRIMARY KEY AUTO_INCREMENT,
+    numero VARCHAR(9) NOT NULL UNIQUE,
+    fechaActivacion DATE NOT NULL,
+    estado VARCHAR(20) NOT NULL,
+    idCliente INT NOT NULL,
+    idPlan INT NOT NULL,
+    CONSTRAINT fk_linea_cliente
+        FOREIGN KEY (idCliente) REFERENCES cliente(idCliente),
+    CONSTRAINT fk_linea_plan
+        FOREIGN KEY (idPlan) REFERENCES plan(idPlan)
+);
+
+-- ------------------------------------------------------------
+-- 4. TABLA SERVICIO ADICIONAL
+-- ------------------------------------------------------------
+CREATE TABLE servicio_adicional (
+    idServicio INT PRIMARY KEY AUTO_INCREMENT,
+    nombre VARCHAR(60) NOT NULL,
+    descripcion VARCHAR(150),
+    precioBase DECIMAL(8,2) NOT NULL
+);
+
+-- ------------------------------------------------------------
+-- 5. RELACION N:M ENTRE LINEA Y SERVICIO ADICIONAL
+-- ------------------------------------------------------------
+CREATE TABLE linea_servicio (
+    idLinea INT NOT NULL,
+    idServicio INT NOT NULL,
+    fechaContratacion DATE NOT NULL,
+    fechaVencimiento DATE,
+    precioContratado DECIMAL(8,2) NOT NULL,
+    PRIMARY KEY (idLinea, idServicio),
+    CONSTRAINT fk_linea_servicio_linea
+        FOREIGN KEY (idLinea) REFERENCES linea(idLinea),
+    CONSTRAINT fk_linea_servicio_servicio
+        FOREIGN KEY (idServicio) REFERENCES servicio_adicional(idServicio)
+);
+
+-- ------------------------------------------------------------
+-- DATOS: CLIENTES
+-- ------------------------------------------------------------
+INSERT INTO cliente (dni, nombres, apellidos, correo, fechaNacimiento) VALUES
+('72451836', 'Andrea', 'Salazar Torres', 'andrea.salazar@email.com', '1994-03-18'),
+('70852147', 'Luis', 'Mendoza Ruiz', 'luis.mendoza@email.com', '1988-11-02'),
+('75621489', 'Camila', 'Rojas Vega', 'camila.rojas@email.com', '2000-07-15'),
+('68421573', 'Carlos', 'Paredes Soto', 'carlos.paredes@email.com', '1985-01-27'),
+('73145826', 'Valeria', 'Castro Luna', 'valeria.castro@email.com', '1997-09-10'),
+('69524138', 'Diego', 'Flores Ramos', 'diego.flores@email.com', '1991-05-06'),
+('74851263', 'Lucia', 'Navarro Diaz', 'lucia.navarro@email.com', '2002-12-21'),
+('71236548', 'Miguel', 'Herrera Campos', 'miguel.herrera@email.com', '1990-08-14'),
+('76543218', 'Sofia', 'Guzman Reyes', 'sofia.guzman@email.com', '1998-04-30'),
+('70123456', 'Jorge', 'Medina Silva', 'jorge.medina@email.com', '1983-06-19');
+
+-- ------------------------------------------------------------
+-- DATOS: PLANES
+-- ------------------------------------------------------------
+INSERT INTO plan (nombre, precioMensual, gbIncluidos, minutosIncluidos, smsIncluidos) VALUES
+('Basico 10GB',       29.90,  10,  300, 100),
+('Conecta 30GB',      49.90,  30,  800, 300),
+('Full 60GB',         69.90,  60, 1500, 500),
+('Ilimitado Plus',    99.90, 120, 9999, 9999);
+
+-- ------------------------------------------------------------
+-- DATOS: LINEAS
+-- ------------------------------------------------------------
+INSERT INTO linea (numero, fechaActivacion, estado, idCliente, idPlan) VALUES
+('987654321', '2023-02-15', 'ACTIVA',    1, 2),
+('986123456', '2024-06-10', 'ACTIVA',    1, 3),
+('985741236', '2022-09-01', 'ACTIVA',    2, 4),
+('984512367', '2025-01-20', 'ACTIVA',    3, 1),
+('983654127', '2021-11-12', 'SUSPENDIDA',4, 2),
+('982741365', '2024-03-05', 'ACTIVA',    5, 3),
+('981236547', '2025-08-14', 'ACTIVA',    6, 1),
+('980654213', '2023-12-02', 'ACTIVA',    7, 2),
+('979321654', '2022-04-18', 'ACTIVA',    8, 4),
+('978456123', '2024-10-25', 'ACTIVA',    9, 3),
+('977123654', '2025-05-09', 'ACTIVA',   10, 2),
+('976541238', '2020-07-30', 'SUSPENDIDA',2, 1),
+('975812364', '2025-11-01', 'ACTIVA',    5, 4),
+('974236581', '2026-01-17', 'ACTIVA',    3, 2);
+
+-- ------------------------------------------------------------
+-- DATOS: SERVICIOS ADICIONALES
+-- ------------------------------------------------------------
+INSERT INTO servicio_adicional (nombre, descripcion, precioBase) VALUES
+('Roaming Internacional', 'Uso de datos y llamadas en países habilitados', 50.00),
+('Paquete 10GB', 'Paquete adicional de 10 GB de datos', 20.00),
+('Llamadas Internacionales', 'Minutos para llamadas internacionales', 25.00),
+('Streaming Plus', 'Acceso promocional a plataforma de streaming', 30.00),
+('Redes Sociales Ilimitadas', 'Uso ilimitado de aplicaciones seleccionadas', 15.00);
+
+-- ------------------------------------------------------------
+-- DATOS: CONTRATACION DE SERVICIOS
+-- Algunos precios son diferentes al precioBase para practicar
+-- el concepto de atributos propios de una relación.
+-- ------------------------------------------------------------
+INSERT INTO linea_servicio
+(idLinea, idServicio, fechaContratacion, fechaVencimiento, precioContratado) VALUES
+(1, 1, '2026-01-10', '2026-12-31', 35.00),
+(1, 4, '2026-02-01', '2026-12-31', 25.00),
+(2, 2, '2026-03-15', '2026-09-15', 18.00),
+(3, 1, '2026-01-05', '2026-12-31', 50.00),
+(3, 3, '2026-04-01', '2026-10-01', 20.00),
+(4, 5, '2026-02-20', NULL,         12.00),
+(6, 4, '2026-05-12', '2027-05-12', 30.00),
+(8, 2, '2026-06-01', '2026-12-01', 20.00),
+(9, 1, '2026-07-10', '2027-01-10', 45.00),
+(9, 4, '2026-07-10', '2027-01-10', 22.00),
+(10,5, '2026-08-05', NULL,          15.00),
+(11,2, '2026-08-15', '2027-02-15', 17.00),
+(13,3, '2026-09-01', '2027-03-01', 25.00);
+
+-- ============================================================
+-- CONSULTAS DE EJEMPLO PARA LA CLASE
+-- ============================================================
+
+-- 1. SELECT básico
+SELECT * FROM cliente;
+
+-- 2. Selección de columnas
+SELECT dni, nombres, apellidos
+FROM cliente;
+
+-- 3. CONCAT
+SELECT dni,
+       CONCAT(nombres, ' ', apellidos) AS nombreCompleto
+FROM cliente;
+
+-- 4. Operación aritmética
+SELECT nombre,
+       precioMensual,
+       precioMensual * 12 AS precioAnual
+FROM plan;
+
+-- 5. Descuento del 20%
+SELECT nombre,
+       precioMensual,
+       precioMensual * 0.20 AS descuento,
+       precioMensual * 0.80 AS precioFinal
+FROM plan;
+
+-- 6. Funciones de fecha
+SELECT numero,
+       fechaActivacion,
+       DATEDIFF(CURRENT_DATE(), fechaActivacion) AS diasActiva
+FROM linea;
+
+-- 7. RETO de la PPT: reporte comercial con 15% de descuento
+SELECT nombre AS plan,
+       gbIncluidos AS gigabytes,
+       precioMensual,
+       precioMensual * 12 AS precioAnual,
+       precioMensual * 0.15 AS descuento,
+       precioMensual * 0.85 AS precioPromocional,
+       precioMensual * 0.85 * 12 AS precioAnualPromocional
+FROM plan;
+
