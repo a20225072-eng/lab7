@@ -1,0 +1,219 @@
+GUÍA DE SQL - GIMNASIO FITCONTROL
+
+Esta guía cubre la preparación de la base y la parte 2 (consultas SQL).
+No incluye el programa con menú y excepciones de la parte 1.
+El PDF no proporciona un script de base de datos. Si el profesor entrega
+uno adicional, utiliza sus nombres de tablas y columnas. El diseño siguiente
+es una propuesta coherente para practicar las ocho consultas.
+
+1. POR DÓNDE EMPEZAR
+Primero crea la base; después las tablas; luego introduce datos y ejecuta consultas.
+No necesitas programar el menú para practicar SQL.
+
+2. CREAR LA BASE GRÁFICAMENTE EN MYSQL WORKBENCH
+Abre tu conexión al servidor MySQL.
+En SCHEMAS, clic derecho > Create Schema.
+Nombre: fitcontrol. Pulsa Apply > Apply > Finish.
+Despliega fitcontrol. Si no aparece, actualiza el panel SCHEMAS.
+
+3. CREAR LAS TABLAS GRÁFICAMENTE
+Dentro de fitcontrol: clic derecho en Tables > Create Table.
+Escribe el nombre de la tabla y completa las columnas indicadas abajo.
+PK = clave primaria: identifica cada fila.
+NN = Not Null: el dato es obligatorio.
+AI = Auto Increment: genera el código automáticamente.
+UQ = Unique: no permite repetir el valor.
+Guarda cada tabla con Apply > Apply > Finish.
+Los tamaños de texto de esta guía son decisiones de diseño, no exigencias del PDF.
+
+TABLA alumnos
+Columna       Tipo           Casillas
+idAlumno      INT            PK, NN, AI
+nombre        VARCHAR(100)   NN
+dni           VARCHAR(8)     NN, UQ
+correo        VARCHAR(100)   NN
+edad          INT            NN
+El DNI se guarda como texto para conservar ceros al inicio.
+
+TABLA entrenadores
+idEntrenador  INT            PK, NN, AI
+nombre        VARCHAR(100)   NN
+especialidad  VARCHAR(60)    NN
+telefono      VARCHAR(20)    NN
+El teléfono se guarda como texto; validar que solo tenga dígitos es otra tarea.
+
+TABLA clases
+idClase       INT            PK, NN, AI
+nombre        VARCHAR(100)   NN
+idEntrenador  INT            NN
+cupos         INT            NN
+precio        DECIMAL(10,2)  NN
+cupos representa los lugares disponibles; puede llegar a cero tras inscripciones.
+
+TABLA inscripciones
+idAlumno      INT            PK, NN
+idClase       INT            PK, NN
+Marca PK en las DOS columnas: forman una clave primaria compuesta.
+Esto impide repetir la pareja alumno-clase, pero permite varias clases por alumno.
+No marques AI en estas columnas: son códigos que ya existen en otras tablas.
+
+TABLA pagos
+idPago        INT            PK, NN, AI
+idAlumno      INT            NN
+tipoMembresia VARCHAR(20)    NN
+monto         DECIMAL(10,2)  NN
+Tipos válidos según el PDF: Mensual, Trimestral y Anual.
+
+4. CREAR LAS RELACIONES (FOREIGN KEYS)
+Abre la tabla con clic derecho > Alter Table y entra a Foreign Keys.
+Agrega un nombre a la relación, elige Referenced Table y vincula las columnas.
+Guarda con Apply. Las tablas relacionadas deben usar InnoDB y tipos compatibles.
+
+Tabla clases:
+fk_clases_entrenador: idEntrenador -> entrenadores.idEntrenador
+
+Tabla inscripciones:
+fk_inscripciones_alumno: idAlumno -> alumnos.idAlumno
+fk_inscripciones_clase: idClase -> clases.idClase
+
+Tabla pagos:
+fk_pagos_alumno: idAlumno -> alumnos.idAlumno
+
+Una clave foránea impide usar un código que no existe en la tabla referenciada.
+Las demás validaciones del programa (excepciones, montos positivos, etc.) no quedan
+implementadas únicamente por marcar estas casillas.
+
+5. INTRODUCIR DATOS DE EJEMPLO
+Clic derecho en la tabla > Select Rows - Limit 1000.
+Completa la fila vacía de la cuadrícula y pulsa Apply para guardar.
+Deja los códigos AI sin completar y anota los códigos que MySQL genere.
+Introduce datos en este orden: alumnos, entrenadores, clases, inscripciones, pagos.
+En las relaciones usa los códigos realmente generados.
+
+Ejemplo para una base nueva (códigos esperados comenzando en 1):
+Alumnos:
+1 Ana   12345678 ana@example.com   20
+2 Luis  23456789 luis@example.com  25
+3 Marta 34567890 marta@example.com 30
+
+Entrenadores:
+1 Carlos Funcional 987654321
+2 Elena  Yoga      986123456
+
+Clases (idClase, nombre, idEntrenador, cupos disponibles, precio):
+1 Funcional A 1 8  20.00
+2 Funcional B 1 9  25.00
+3 Funcional C 1 10 30.00
+4 Yoga        2 9  15.00
+Suponemos capacidad inicial de 10: los cupos indicados ya reflejan las inscripciones.
+
+Inscripciones (idAlumno, idClase):
+1 1
+2 1
+1 2
+2 4
+Marta no tiene inscripción; Funcional C no tiene inscritos.
+
+Pagos (idAlumno, tipoMembresia, monto; idPago se genera solo):
+1 Mensual    100.00
+1 Trimestral 270.00
+2 Anual      900.00
+Marta no tiene pagos.
+
+6. CONSULTAS SQL
+Abre una pestaña SQL y selecciona fitcontrol como base predeterminada
+(doble clic en su nombre en SCHEMAS), o ejecuta USE fitcontrol;
+Ejecuta cada consulta por separado seleccionando su texto y usando el botón del rayo.
+
+CONSULTA 1: Clases con su entrenador
+SELECT c.nombre AS Clase, e.nombre AS Entrenador, e.especialidad
+FROM clases c
+INNER JOIN entrenadores e ON c.idEntrenador = e.idEntrenador;
+INNER JOIN relaciona cada clase con el entrenador cuyo código coincide.
+
+CONSULTA 2: Alumnos sin inscripción
+SELECT a.idAlumno, a.nombre, a.dni, a.correo
+FROM alumnos a
+LEFT JOIN inscripciones i ON a.idAlumno = i.idAlumno
+WHERE i.idAlumno IS NULL;
+LEFT conserva los alumnos. WHERE deja a quienes no encontraron inscripción.
+Con los datos de ejemplo: Marta.
+
+CONSULTA 3: Cantidad de inscritos por clase, incluyendo clases vacías
+SELECT c.nombre AS Clase, COUNT(i.idAlumno) AS CantidadInscritos
+FROM clases c
+LEFT JOIN inscripciones i ON c.idClase = i.idClase
+GROUP BY c.idClase, c.nombre;
+GROUP BY forma un grupo por clase; COUNT cuenta dentro de cada grupo.
+COUNT(i.idAlumno) ignora NULL: una clase vacía obtiene cero.
+COUNT(*) contaría también la fila producida por LEFT JOIN para una clase vacía.
+Ejemplo: Funcional A=2, Funcional B=1, Funcional C=0, Yoga=1.
+
+CONSULTA 4: Ingreso total por tipo de membresía
+SELECT tipoMembresia, SUM(monto) AS IngresoTotal
+FROM pagos
+GROUP BY tipoMembresia;
+SUM suma los pagos dentro de cada tipo de membresía.
+
+CONSULTA 5: Top 3 clases con más inscritos
+SELECT c.nombre AS Clase, COUNT(i.idAlumno) AS CantidadInscritos
+FROM clases c
+LEFT JOIN inscripciones i ON c.idClase = i.idClase
+GROUP BY c.idClase, c.nombre
+ORDER BY CantidadInscritos DESC, c.idClase ASC
+LIMIT 3;
+Ordena de mayor a menor y muestra tres filas. Ante empate, usa el código de clase.
+
+CONSULTA 6: Entrenadores con más de dos clases
+SELECT e.nombre AS Entrenador, e.especialidad,
+       COUNT(c.idClase) AS CantidadClases
+FROM entrenadores e
+INNER JOIN clases c ON e.idEntrenador = c.idEntrenador
+GROUP BY e.idEntrenador, e.nombre, e.especialidad
+HAVING COUNT(c.idClase) > 2;
+HAVING filtra los grupos después de contar: conserva tres clases o más.
+Ejemplo: Carlos, Funcional, 3.
+
+CONSULTA 7: Pagos superiores al promedio general
+SELECT a.nombre AS Alumno, p.tipoMembresia, p.monto AS MontoPagado
+FROM alumnos a
+INNER JOIN pagos p ON a.idAlumno = p.idAlumno
+WHERE p.monto > (SELECT AVG(monto) FROM pagos);
+Tema nuevo: una subconsulta, es decir, un SELECT dentro de otra consulta.
+El SELECT interior calcula el promedio general; el exterior compara cada pago.
+No compara el total acumulado por alumno.
+Ejemplo: promedio = (100+270+900)/3 = 423.33 aproximadamente.
+Solo aparece Luis con su pago Anual de 900.
+
+CONSULTA 8: Total pagado por cada alumno
+SELECT a.nombre AS Alumno, a.correo,
+       COALESCE(SUM(p.monto), 0) AS MontoTotalPagado
+FROM alumnos a
+LEFT JOIN pagos p ON a.idAlumno = p.idAlumno
+GROUP BY a.idAlumno, a.nombre, a.correo;
+SUM suma los pagos por alumno; LEFT conserva a quienes no pagaron.
+Tema nuevo: COALESCE convierte el resultado NULL en cero.
+Ejemplo: Ana=370, Luis=900, Marta=0.
+
+7. RECORDATORIO DE LO ESTUDIADO
+SELECT: columnas que deseas ver.
+FROM: tabla de origen.
+ON: condición para relacionar las filas de dos tablas.
+INNER JOIN: solo parejas que coinciden.
+LEFT JOIN: conserva todas las filas de la tabla izquierda.
+RIGHT JOIN: conserva todas las filas de la tabla derecha.
+Si no hay coincidencia en una unión externa, las columnas del otro lado son NULL.
+Si hay varias coincidencias, aparecen varias filas.
+WHERE: filtra filas; puede eliminar filas conservadas por LEFT o RIGHT JOIN.
+GROUP BY: forma grupos con valores iguales, no cuenta por sí solo.
+COUNT: cuenta; SUM: suma; AVG: promedia; MAX: máximo; MIN: mínimo.
+HAVING: filtra grupos según una condición, por ejemplo COUNT(*) > 2.
+ORDER BY: ordena filas completas. DESC=mayor a menor; ASC=menor a mayor.
+LIMIT: restringe la cantidad de filas mostradas.
+Los alias c, e, a, i y p son nombres cortos definidos en FROM o JOIN.
+
+8. GUARDAR LAS CONSULTAS
+En una pestaña SQL coloca las ocho consultas y usa File > Save Script As.
+Guarda con extensión .sql, por ejemplo consultas_fitcontrol.sql.
+El PDF pide entregar un ZIP e incluir los archivos .sql de las consultas.
+Esta guía cubre solo SQL; el laboratorio completo también solicita la parte 1.
